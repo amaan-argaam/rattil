@@ -22,10 +22,13 @@ module.exports = function withReleaseSigning(config) {
     let g = c.modResults.contents;
     if (!g.includes("RATTIL_KEYSTORE")) {
       g = g.replace(/signingConfigs \{\n(\s+)debug \{/, (m) => m.replace("signingConfigs {", "signingConfigs {" + RELEASE));
-      g = g.replace(
-        /(release \{\n(?:[^\n]*\n)*?\s+)signingConfig signingConfigs\.debug/,
-        `$1signingConfig System.getenv("RATTIL_KEYSTORE") ? signingConfigs.release : signingConfigs.debug`,
-      );
+      // Only the release build type, which comes after `buildTypes {` (the signingConfigs block above also has a
+      // `release {`, and the debug build type must keep the debug key).
+      const at = g.indexOf("buildTypes {");
+      const rel = at < 0 ? -1 : g.indexOf("release {", at);
+      const sc = rel < 0 ? -1 : g.indexOf("signingConfig signingConfigs.debug", rel);
+      if (sc >= 0)
+        g = g.slice(0, sc) + 'signingConfig System.getenv("RATTIL_KEYSTORE") ? signingConfigs.release : signingConfigs.debug' + g.slice(sc + "signingConfig signingConfigs.debug".length);
       if (!g.includes('signingConfigs.release : signingConfigs.debug')) throw new Error("with-release-signing: build.gradle layout changed");
     }
     c.modResults.contents = g;
