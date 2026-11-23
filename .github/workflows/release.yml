@@ -1,0 +1,108 @@
+name: Release APK
+
+# Push a tag like v0.1.0 to build a signed APK and publish it as a GitHub pre-release.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build, e.g. v0.1.0"
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Check the signing secrets are set
+        env:
+          KS: ${{ secrets.RATTIL_KEYSTORE_BASE64 }}
+          PW: ${{ secrets.RATTIL_KEYSTORE_PASSWORD }}
+          AL: ${{ secrets.RATTIL_KEY_ALIAS }}
+        run: |
+          [ -n "$KS" ] && [ -n "$PW" ] && [ -n "$AL" ] || { echo "::error::Signing secrets are missing"; exit 1; }
+
+      - name: Version must match the tag
+        run: |
+          V=$(node -p "require('./app.json').expo.version")
+          [ "v$V" = "$TAG" ] || { echo "::error::app.json version v$V does not match tag $TAG"; exit 1; }
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Generate the Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Decode keystore
+        env:
+          KS: ${{ secrets.RATTIL_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KS" | base64 -d > "$RUNNER_TEMP/release.jks"
+          echo "RATTIL_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+
+      - name: Build signed release APK
+        working-directory: android
+        env:
+          RATTIL_KEYSTORE_PASSWORD: ${{ secrets.RATTIL_KEYSTORE_PASSWORD }}
+          RATTIL_KEY_ALIAS: ${{ secrets.RATTIL_KEY_ALIAS }}
+          RATTIL_KEY_PASSWORD: ${{ secrets.RATTIL_KEYSTORE_PASSWORD }}
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a --no-daemon
+
+      - name: Verify signature and collect the APK
+        run: |
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/apksigner" verify --print-certs "$APK" | tee signature.txt
+          if grep -qi "CN=Android Debug" signature.txt; then echo "::error::APK is debug-signed"; exit 1; fi
+          mkdir -p out
+          cp "$APK" "out/rattil-$TAG.apk"
+          (cd out && sha256sum "rattil-$TAG.apk" > "rattil-$TAG.apk.sha256")
+          rm -f "$RUNNER_TEMP/release.jks"
+
+      - name: Publish pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CERT=$(grep -m1 "SHA-256 digest" signature.txt | sed 's/.*digest: //')
+          cat > notes.md <<NOTES
+          Signed Android APK for Rattil $TAG.
+
+          **Install:** download \`rattil-$TAG.apk\` on your phone and open it (allow installs from your browser or file manager when asked).
+
+          On first use of the microphone, the app downloads Tilawa's recognition model (about 25 MB) once from tilawa.dev. After that, recognition is fully offline and your voice never leaves the phone.
+
+          Signing certificate SHA-256: \`$CERT\`
+          NOTES
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" out/* --clobber
+          else
+            gh release create "$TAG" out/* --prerelease --title "Rattil $TAG" --notes-file notes.md --verify-tag
+          fi

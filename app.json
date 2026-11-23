@@ -1,25 +1,80 @@
 {
   "expo": {
-    "name": "rattil",
+    "name": "Rattil",
     "slug": "rattil",
-    "version": "1.0.0",
+    "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "io.github.amaanargaam.rattil",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Rattil listens on your device to follow your recitation."
+      }
     },
     "android": {
+      "package": "io.github.amaanargaam.rattil",
+      "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#2F5A4C",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
+      "blockedPermissions": [
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE"
+      ],
       "predictiveBackGestureEnabled": false
     },
-    "web": {
-      "favicon": "./assets/favicon.png"
+    "plugins": [
+      "expo-font",
+      [
+        "react-native-audio-api",
+        {
+          "iosBackgroundMode": false,
+          "androidForegroundService": false,
+          "androidPermissions": [
+            "android.permission.RECORD_AUDIO"
+          ],
+          "iosMicrophonePermission": "Rattil listens on your device to follow your recitation.",
+          "enableFFmpeg": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": false
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FBF4E2",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "dark": {
+            "backgroundColor": "#17140F",
+            "image": "./assets/splash-icon.png"
+          }
+        }
+      ],
+      "./plugins/with-ltr-layout",
+      "./plugins/with-release-signing"
+    ],
+    "backgroundColor": "#E9DDBF",
+    "description": "A free, open-source, ad-free mushaf that follows your recitation on-device.",
+    "githubUrl": "https://github.com/amaan-argaam/rattil",
+    "extra": {
+      "supportsRTL": false
     }
   }
 }
