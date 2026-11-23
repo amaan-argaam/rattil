@@ -10,6 +10,8 @@ gently with a soft underline, never by changing the text.
 Recognition runs entirely on the phone with [Tilawa](https://github.com/yazinsai/tilawa). Your voice is never
 recorded, stored or sent anywhere.
 
+![Page 1; following Ayat al-Kursi with a gently marked word; night mode](docs/screenshots.png)
+
 ## Download
 
 Get the latest APK from [Releases](https://github.com/amaan-argaam/rattil/releases). The first time you tap the
