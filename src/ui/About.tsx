@@ -84,7 +84,7 @@ export const About = memo(function About({ visible, onClose }: { visible: boolea
 
           <H>Software</H>
           <P>
-            ONNX Runtime (Microsoft, MIT) · React Native and Expo (MIT) · react-native-audio-api (Software Mansion,
+            ONNX Runtime Web (Microsoft, MIT) · React Native and Expo (MIT) · react-native-webview (MIT) · react-native-audio-api (Software Mansion,
             MIT) · react-native-svg (MIT) · react-native-pager-view (MIT).
           </P>
           <Text style={[styles.dua, { color: t.gold }]}>{AYAH_73_4}</Text>

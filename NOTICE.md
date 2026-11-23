@@ -46,6 +46,7 @@ Project Authors (https://github.com/aliftype/amiri), **SIL Open Font License 1.1
 
 ## Libraries
 
-React Native and Expo (MIT), ONNX Runtime / onnxruntime-react-native (Microsoft, MIT), react-native-audio-api
+React Native and Expo (MIT), ONNX Runtime Web / onnxruntime-web 1.30.0 (Microsoft, MIT; its WASM binary is
+bundled in the APK), react-native-webview (MIT), react-native-audio-api
 (Software Mansion, MIT), react-native-svg (MIT), react-native-pager-view (MIT), react-native-safe-area-context
-(MIT), HarfBuzz / harfbuzzjs (MIT, build-time only, to measure line widths).
+(MIT), HarfBuzz / harfbuzzjs (MIT, build-time only, to measure line widths), esbuild (MIT, build-time only).

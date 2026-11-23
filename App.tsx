@@ -4,7 +4,9 @@ import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
 import { useEffect } from "react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useSettings } from "./src/state/settings";
+import { EngineHost } from "./src/engine/host";
+import { warmUp } from "./src/engine/recitation";
+import { getSettings, useSettings } from "./src/state/settings";
 import { DAY, FONT_ARABIC, FONT_ARABIC_BOLD, FONT_QURAN, NIGHT, ThemeContext } from "./src/theme";
 import { MushafScreen } from "./src/ui/MushafScreen";
 
@@ -23,7 +25,11 @@ export default function App() {
     SystemUI.setBackgroundColorAsync(theme.desk).catch(() => {});
   }, [theme.desk]);
   useEffect(() => {
-    if (loaded) SplashScreen.hideAsync().catch(() => {});
+    if (!loaded) return;
+    SplashScreen.hideAsync().catch(() => {});
+    // Load the recognition engine in the background once the page is on screen.
+    const t = setTimeout(() => warmUp(getSettings().tier), 1500);
+    return () => clearTimeout(t);
   }, [loaded]);
 
   if (!loaded) return null;
@@ -32,6 +38,7 @@ export default function App() {
       <ThemeContext.Provider value={theme}>
         <StatusBar style={night ? "light" : "dark"} />
         <MushafScreen />
+        <EngineHost />
       </ThemeContext.Provider>
     </SafeAreaProvider>
   );

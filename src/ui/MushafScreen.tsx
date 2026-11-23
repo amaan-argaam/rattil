@@ -4,13 +4,20 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, useWindowDimensi
 import PagerView from "react-native-pager-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PAGE_COUNT, SURAHS, TOKENS, pageOf } from "../data/quran";
-import { clearError, replayWav, startRecitation, stopRecitation, useRecitation } from "../engine/recitation";
+import { REPLAY_URL, clearError, replayWav, startRecitation, stopRecitation, useRecitation } from "../engine/recitation";
 import { getSettings, updateSettings, useSettings } from "../state/settings";
 import { useTheme } from "../theme";
 import { About } from "./About";
 import { BookIcon, MicIcon, MoonIcon, StopIcon, SunIcon } from "./icons";
 import { IndexSheet } from "./IndexSheet";
 import { MushafPage } from "./MushafPage";
+
+/**
+ * Pager slots run from page 604 down to page 1, so that, as in a printed Arabic mushaf, the next page comes from
+ * the left (swipe left to right) whatever the device's locale.
+ */
+const slotOf = (page: number) => PAGE_COUNT - page;
+const pageAt = (slot: number) => PAGE_COUNT - slot;
 
 /** Pages rendered either side of the one on screen. */
 const WINDOW = 1;
@@ -49,8 +56,8 @@ export function MushafScreen() {
 
   const goTo = useCallback((p: number, animated = true) => {
     programmatic.current = true;
-    if (animated) pager.current?.setPage(p - 1);
-    else pager.current?.setPageWithoutAnimation(p - 1);
+    if (animated) pager.current?.setPage(slotOf(p));
+    else pager.current?.setPageWithoutAnimation(slotOf(p));
   }, []);
 
   // Follow the reciter.
@@ -62,7 +69,7 @@ export function MushafScreen() {
   }, [currentPage, settings.follow]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onSelected = useCallback((e: { nativeEvent: { position: number } }) => {
-    const p = e.nativeEvent.position + 1;
+    const p = pageAt(e.nativeEvent.position);
     if (!programmatic.current) lastManual.current = Date.now();
     programmatic.current = false;
     setPage(p);
@@ -88,11 +95,11 @@ export function MushafScreen() {
   }, [rec.status]);
 
   const onMicLong = useCallback(async () => {
-    if (!__DEV__) return;
-    // Development only: replay a sample recitation from Tilawa's test fixtures (Al-Fatiha... see Tilawa repo).
-    const res = await fetch("https://raw.githubusercontent.com/yazinsai/tilawa/main/packages/tilawa-core/test/fixtures/tlog-clean-00010-630.wav");
+    // Testing aid (see replayWav): feeds a recording instead of the microphone. Inert in published releases.
+    if (!REPLAY_URL || rec.status !== "idle") return;
+    const res = await fetch(`${REPLAY_URL}?t=${Date.now()}`, { cache: "no-store" });
     replayWav(getSettings().tier, new Uint8Array(await res.arrayBuffer()));
-  }, []);
+  }, [rec.status]);
 
   useEffect(() => {
     if (rec.status === "error" && rec.error) {
@@ -111,7 +118,7 @@ export function MushafScreen() {
     return "";
   })();
 
-  const pages = useMemo(() => Array.from({ length: PAGE_COUNT }, (_, i) => i + 1), []);
+  const pages = useMemo(() => Array.from({ length: PAGE_COUNT }, (_, i) => pageAt(i)), []);
 
   return (
     <View style={[styles.root, { backgroundColor: t.desk }]}>
@@ -119,8 +126,7 @@ export function MushafScreen() {
       <PagerView
         ref={pager}
         style={{ position: "absolute", left: 0, right: 0, top: geo.top, height: geo.height }}
-        initialPage={page - 1}
-        layoutDirection="rtl"
+        initialPage={slotOf(page)}
         offscreenPageLimit={1}
         onPageSelected={onSelected}
       >
@@ -145,12 +151,14 @@ export function MushafScreen() {
         <Pressable style={styles.side} onPress={() => setIndexOpen(true)} hitSlop={8} accessibilityLabel="Index and settings">
           <BookIcon color={t.chromeInk} size={26} />
         </Pressable>
-        <View style={styles.center}>
-          {status ? (
+        {status ? (
+          <View style={styles.statusWrap} pointerEvents="none">
             <Text numberOfLines={1} style={[styles.status, { color: t.chromeInk, backgroundColor: t.chrome, borderColor: t.goldSoft }]}>
               {status}
             </Text>
-          ) : null}
+          </View>
+        ) : null}
+        <View style={styles.center}>
           <Pressable
             onPress={onMic}
             onLongPress={onMicLong}
@@ -203,7 +211,8 @@ const styles = StyleSheet.create({
   bar: { position: "absolute", left: 0, right: 0, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 22 },
   side: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
   center: { alignItems: "center", justifyContent: "center" },
-  status: { position: "absolute", bottom: 70, fontSize: 13, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, borderWidth: 1, overflow: "hidden", maxWidth: 280 },
+  statusWrap: { position: "absolute", left: 0, right: 0, bottom: 74, alignItems: "center" },
+  status: { fontSize: 13, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, borderWidth: 1, overflow: "hidden", maxWidth: 280 },
   mic: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", borderWidth: 2.5, elevation: 4 },
   progress: { position: "absolute", bottom: -6, width: 64, height: 3, borderRadius: 2, overflow: "hidden" },
 });

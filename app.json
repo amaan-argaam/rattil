@@ -68,7 +68,8 @@
         }
       ],
       "./plugins/with-ltr-layout",
-      "./plugins/with-release-signing"
+      "./plugins/with-release-signing",
+      "expo-asset"
     ],
     "backgroundColor": "#E9DDBF",
     "description": "A free, open-source, ad-free mushaf that follows your recitation on-device.",

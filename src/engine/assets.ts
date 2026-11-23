@@ -87,6 +87,3 @@ export function removeOtherTiers(keep: TierName) {
     if (mark.exists) mark.delete();
   }
 }
-
-/** Plain filesystem path for onnxruntime-react-native. */
-export const pathOf = (f: File) => decodeURIComponent(f.uri.replace(/^file:\/\//, ""));
